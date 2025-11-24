@@ -6,12 +6,10 @@ import os
 import sys
 
 # Step 1: Load environment variables FIRST (before any other local imports)
-from env_loader import ensure_env_loaded
+# Step 1: Load environment variables FIRST (before any other local imports)
+from env_loader import load_environment
 
-try:
-    ensure_env_loaded()
-except Exception as e:
-    print(f"\n❌ FATAL ERROR: {e}\n")
+if not load_environment():
     sys.exit(1)
 
 # Step 2: Now safe to import everything else
