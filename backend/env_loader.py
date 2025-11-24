@@ -34,6 +34,13 @@ class EnvLoader:
         print("NeuroSync Backend - Environment Loader")
         print("=" * 60 + "\n")
         
+        # Check if critical variables are already set (e.g. by Railway)
+        if os.getenv("SUPABASE_URL") and os.getenv("SUPABASE_KEY"):
+            print("[INFO] System environment variables detected (Railway/Production).")
+            print("[INFO] Skipping .env file search to use provided variables.\n")
+            self.loaded = True
+            return True
+        
         # Try to find and load .env file (optional in production)
         possible_paths = [
             Path.cwd() / ".env",
