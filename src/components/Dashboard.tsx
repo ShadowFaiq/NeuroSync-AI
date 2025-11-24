@@ -228,9 +228,8 @@ export default function Dashboard({ userId }: DashboardProps) {
                                 )}
                             </div>
                         </div>
-                        </div>
                     ))}
-        </div>
+                </div>
             </GlassCard >
         </div >
     );
