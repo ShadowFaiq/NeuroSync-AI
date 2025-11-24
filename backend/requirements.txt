@@ -12,5 +12,5 @@ scipy
 numpy
 
 # Database & External Services
-supabase==2.3.0
+supabase==2.7.4
 spotipy==2.23.0
