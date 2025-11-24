@@ -230,7 +230,7 @@ export default function Dashboard({ userId }: DashboardProps) {
                         </div>
                     ))}
                 </div>
-            </GlassCard >
-        </div >
+            </GlassCard>
+        </div>
     );
 }
