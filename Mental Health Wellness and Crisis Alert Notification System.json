@@ -1,0 +1,498 @@
+{
+  "name": "Mental Health Wellness and Crisis Alert Notification System",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "wellness-plan",
+        "responseMode": "lastNode",
+        "options": {}
+      },
+      "id": "05ef32a1-df31-4cc5-9efd-58a5ad71ea8e",
+      "name": "Wellness Plan Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        -352,
+        96
+      ],
+      "webhookId": "ed383e17-0a08-4f9d-8b03-f7fd74512e58"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Extract data from webhook body\nconst webhookData = $input.all()[0].json.body;\n\n// Extract user email\nconst userEmail = webhookData.user_email;\n\n// Extract wellness plan object\nconst wellnessPlan = webhookData.wellness_plan || {};\n\n// Extract mood and anxiety scores\nconst moodScore = parseFloat(webhookData.mood_score || 0);\nconst anxietyScore = parseFloat(webhookData.anxiety_score || 0);\nconst moodPercentage = Math.round(moodScore * 100);\nconst anxietyPercentage = Math.round(anxietyScore * 100);\n\n// Assign emoji and color based on mood score ranges\nlet moodEmoji = '';\nlet moodColor = '';\n\nif (moodScore >= 0.8) {\n  moodEmoji = '😊';\n  moodColor = '#4CAF50';\n} else if (moodScore >= 0.6) {\n  moodEmoji = '🙂';\n  moodColor = '#8BC34A';\n} else if (moodScore >= 0.4) {\n  moodEmoji = '😐';\n  moodColor = '#FFC107';\n} else if (moodScore >= 0.2) {\n  moodEmoji = '😟';\n  moodColor = '#FF9800';\n} else {\n  moodEmoji = '😢';\n  moodColor = '#F44336';\n}\n\n// Get immediate actions from wellness plan\nconst immediateActions = wellnessPlan.immediateActions || wellnessPlan.immediate_actions || [];\nconst firstThreeActions = immediateActions.slice(0, 3);\n\n// Get recommended activities from wellness plan\nconst recommendedActivities = wellnessPlan.recommendedActivities || wellnessPlan.recommended_activities || [];\nconst firstFourActivities = recommendedActivities.slice(0, 4);\n\n// Check if anxiety alert should be shown (high anxiety score)\nconst showAnxietyAlert = anxietyScore > 0.5;\n\n// Build immediate actions HTML\nlet actionsHTML = '';\nfirstThreeActions.forEach(action => {\n  actionsHTML += `<li style=\"margin-bottom: 10px;\">${action}</li>`;\n});\n\n// Build recommended activities HTML\nlet activitiesHTML = '';\nfirstFourActivities.forEach(activity => {\n  activitiesHTML += `<li style=\"margin-bottom: 10px;\">${activity}</li>`;\n});\n\n// Build anxiety alert HTML if needed\nlet anxietyAlertHTML = '';\nif (showAnxietyAlert) {\n  anxietyAlertHTML = `\n    <div style=\"background: linear-gradient(135deg, #FFE5E5 0%, #FFD6D6 100%); padding: 15px; border-radius: 8px; margin: 20px 0; border-left: 4px solid #F44336;\">\n      <p style=\"margin: 0; color: #D32F2F; font-weight: bold;\">⚠️ Anxiety Alert</p>\n      <p style=\"margin: 5px 0 0 0; color: #666;\">Your anxiety score is ${anxietyPercentage}%, indicating elevated stress levels. Please consider the immediate actions below.</p>\n    </div>\n  `;\n}\n\n// Build music recommendation box if needed\nconst musicRecommendation = wellnessPlan.musicRecommendation || wellnessPlan.music_recommendation || {};\nlet musicBoxHTML = '';\nif (musicRecommendation.needed === true || musicRecommendation.spotifyLink) {\n  const spotifyLink = musicRecommendation.spotifyLink || musicRecommendation.spotify_link || '#';\n  musicBoxHTML = `\n    <div style=\"background: linear-gradient(135deg, #E8F5E9 0%, #C8E6C9 100%); padding: 20px; border-radius: 8px; margin: 20px 0; border: 2px solid #4CAF50;\">\n      <h3 style=\"color: #2E7D32; margin-top: 0;\">🎵 Music Recommendation</h3>\n      <p style=\"color: #666; margin: 10px 0;\">We've curated a special playlist to help improve your mood.</p>\n      <a href=\"${spotifyLink}\" style=\"display: inline-block; background-color: #1DB954; color: white; padding: 12px 24px; text-decoration: none; border-radius: 25px; font-weight: bold; margin-top: 10px;\">Listen on Spotify</a>\n    </div>\n  `;\n}\n\n// Get current timestamp\nconst timestamp = new Date().toLocaleString('en-US', { \n  dateStyle: 'full', \n  timeStyle: 'short' \n});\n\n// Create HTML email body\nconst htmlBody = `\n<!DOCTYPE html>\n<html>\n<head>\n  <meta charset=\"UTF-8\">\n  <meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0\">\n</head>\n<body style=\"font-family: Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px;\">\n  <!-- Purple Gradient Header -->\n  <div style=\"background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 30px; border-radius: 10px 10px 0 0; text-align: center;\">\n    <h1 style=\"color: white; margin: 0; font-size: 28px;\">Your Wellness Plan</h1>\n    <p style=\"color: #E8E8FF; margin: 10px 0 0 0;\">Personalized Mental Health Insights</p>\n  </div>\n  \n  <!-- Main Content -->\n  <div style=\"background-color: #f9f9f9; padding: 30px; border-radius: 0 0 10px 10px;\">\n    <!-- Mood Score Display -->\n    <div style=\"text-align: center; margin-bottom: 30px;\">\n      <div style=\"font-size: 60px; margin-bottom: 10px;\">${moodEmoji}</div>\n      <h2 style=\"color: ${moodColor}; margin: 10px 0;\">Mood Score: ${moodPercentage}%</h2>\n    </div>\n    \n    ${anxietyAlertHTML}\n    \n    <!-- Immediate Actions -->\n    <div style=\"background-color: white; padding: 20px; border-radius: 8px; margin-bottom: 20px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);\">\n      <h3 style=\"color: #667eea; margin-top: 0;\">🎯 Immediate Actions</h3>\n      <ul style=\"color: #666; padding-left: 20px;\">\n        ${actionsHTML}\n      </ul>\n    </div>\n    \n    <!-- Recommended Activities -->\n    <div style=\"background-color: white; padding: 20px; border-radius: 8px; margin-bottom: 20px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);\">\n      <h3 style=\"color: #667eea; margin-top: 0;\">✨ Recommended Activities</h3>\n      <ul style=\"color: #666; padding-left: 20px;\">\n        ${activitiesHTML}\n      </ul>\n    </div>\n    \n    ${musicBoxHTML}\n    \n    <!-- Footer -->\n    <div style=\"text-align: center; margin-top: 30px; padding-top: 20px; border-top: 2px solid #ddd;\">\n      <p style=\"color: #999; font-size: 12px; margin: 5px 0;\">${timestamp}</p>\n      <p style=\"color: #667eea; font-weight: bold; font-size: 16px; margin: 10px 0;\">NeuroSync</p>\n      <p style=\"color: #999; font-size: 12px; margin: 5px 0;\">Your Mental Wellness Companion</p>\n    </div>\n  </div>\n</body>\n</html>\n`;\n\n// Create plain text version\nconst plainText = `\nYOUR WELLNESS PLAN\nPersonalized Mental Health Insights\n\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\nMOOD SCORE: ${moodPercentage}% ${moodEmoji}\n\n${showAnxietyAlert ? `⚠️ ANXIETY ALERT\\nYour anxiety score is ${anxietyPercentage}%, indicating elevated stress levels. Please consider the immediate actions below.\\n\\n` : ''}\nIMMEDIATE ACTIONS:\n${firstThreeActions.map((action, i) => `${i + 1}. ${action}`).join('\\n')}\n\nRECOMMENDED ACTIVITIES:\n${firstFourActivities.map((activity, i) => `${i + 1}. ${activity}`).join('\\n')}\n\n${musicRecommendation.needed === true || musicRecommendation.spotifyLink ? `🎵 MUSIC RECOMMENDATION\\nWe've curated a special playlist to help improve your mood.\\nListen on Spotify: ${musicRecommendation.spotifyLink || musicRecommendation.spotify_link || 'N/A'}\\n\\n` : ''}\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n${timestamp}\nNeuroSync - Your Mental Wellness Companion\n`;\n\n// Create email subject\nconst emailSubject = `Your Wellness Plan - Mood Score: ${moodPercentage}%`;\n\n// Return formatted data with correct field names\nreturn [\n  {\n    json: {\n      user_email: userEmail,\n      html_body: htmlBody,\n      plain_text: plainText,\n      email_subject: emailSubject,\n      mood_score: moodScore,\n      anxiety_score: anxietyScore,\n      mood_percentage: moodPercentage,\n      anxiety_percentage: anxietyPercentage,\n      mood_emoji: moodEmoji,\n      mood_color: moodColor,\n      show_anxiety_alert: showAnxietyAlert,\n      original_data: webhookData\n    }\n  }\n];"
+      },
+      "id": "dcaec1a5-2143-4648-a617-ebca44a8027a",
+      "name": "Format Wellness Email",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -128,
+        96
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose"
+          },
+          "conditions": [
+            {
+              "id": "id-1",
+              "leftValue": "={{ $json.user_email }}",
+              "rightValue": "^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$",
+              "operator": {
+                "type": "string",
+                "operation": "regex"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "23acdc8f-4d89-4384-9843-c2d74dd80205",
+      "name": "Validate Email",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        96,
+        96
+      ]
+    },
+    {
+      "parameters": {
+        "fromEmail": "neurosync@gmail.com",
+        "toEmail": "={{ $json.user_email }}",
+        "subject": "={{ $json.email_subject }}",
+        "html": "={{ $json.html_body }}",
+        "options": {}
+      },
+      "id": "2516911e-fd21-4a33-b8c1-0124f5bb64ca",
+      "name": "Send Wellness Email",
+      "type": "n8n-nodes-base.emailSend",
+      "typeVersion": 2.1,
+      "position": [
+        320,
+        0
+      ],
+      "credentials": {
+        "smtp": {
+          "id": "",
+          "name": "NeuroSync Gmail"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "options": {
+          "responseCode": 200
+        }
+      },
+      "id": "f1e4ba8f-4aba-4cfa-b6b5-b543d91abbe3",
+      "name": "Success Response",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.5,
+      "position": [
+        768,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "{\n  \"success\": false,\n  \"error\": \"Invalid email address\"\n}",
+        "options": {
+          "responseCode": 400
+        }
+      },
+      "id": "e5c03a0f-a041-4811-afff-0f6cdaf6610d",
+      "name": "Error Response",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.5,
+      "position": [
+        320,
+        192
+      ]
+    },
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "crisis-alert",
+        "responseMode": "lastNode",
+        "options": {}
+      },
+      "id": "3545b2cc-310b-4ee7-9105-6e600e539fe1",
+      "name": "Crisis Alert Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        -352,
+        584
+      ],
+      "webhookId": "fd174db3-937a-425d-abf9-27b03e7c8d7e"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Extract data from webhook body\nconst webhookData = $input.all()[0].json.body;\n\n// Extract fields from webhook data\nconst severity = webhookData.severity?.toLowerCase();\nconst riskScore = webhookData.risk_score;\nconst riskPercentage = riskScore ? `${Math.round(riskScore * 100)}%` : 'N/A';\nconst userName = webhookData.user_name || 'User';\nconst userPhone = webhookData.user_phone || 'Not provided';\nconst transcript = webhookData.transcript || 'No transcript available';\nconst transcriptPreview = transcript.length > 200 ? transcript.substring(0, 200) + '...' : transcript;\nconst timestamp = webhookData.timestamp || new Date().toISOString();\nconst emergencyContacts = webhookData.emergency_contacts || [];\n\nlet message = '';\n\nif (severity === 'severe') {\n  // SEVERE template with urgent formatting\n  message = `URGENT CRISIS ALERT\\n\\nIMMEDIATE ATTENTION REQUIRED\\n\\nUser: ${userName}\\nRisk Level: SEVERE (${riskPercentage})\\nTime: ${timestamp}\\n\\nTranscript Preview:\\n${transcriptPreview}\\n\\nIMMEDIATE ACTIONS REQUIRED:\\n1. Call user immediately at ${userPhone}\\n2. Contact National Suicide Prevention Lifeline: 988\\n3. Consider contacting emergency services (911) if unable to reach user\\n4. Document all actions taken\\n\\nCRISIS RESOURCES:\\n- National Suicide Prevention Lifeline: 988\\n- Crisis Text Line: Text HOME to 741741\\n- Emergency Services: 911\\n\\nThis is a critical situation requiring immediate intervention.`;\n} else if (severity === 'high') {\n  // HIGH template with supportive messaging\n  message = `HIGH RISK ALERT\\n\\nUrgent Follow-Up Needed\\n\\nUser: ${userName}\\nRisk Level: HIGH (${riskPercentage})\\nTime: ${timestamp}\\n\\nSituation:\\nThis user is showing signs of significant distress and requires prompt support.\\n\\nRECOMMENDED ACTIONS:\\n1. Reach out to user within the next hour at ${userPhone}\\n2. Listen actively and validate their feelings\\n3. Encourage professional help and provide resources\\n4. Schedule follow-up check-in within 24 hours\\n\\nUser Contact Information:\\nPhone: ${userPhone}\\n\\nIMPORTANT NOTE:\\nIf situation escalates or user expresses immediate danger:\\n- Call 988 (Suicide Prevention Lifeline)\\n- Call 911 for emergency services\\n- Do not leave user alone\\n\\nSupport Resources:\\n- National Suicide Prevention Lifeline: 988\\n- Crisis Text Line: Text HOME to 741741`;\n} else {\n  // Default template for other severity levels\n  message = `CRISIS ALERT\\n\\nUser: ${userName}\\nRisk Level: ${severity?.toUpperCase() || 'UNKNOWN'} (${riskPercentage})\\nTime: ${timestamp}\\nPhone: ${userPhone}\\n\\nTranscript Preview:\\n${transcriptPreview}\\n\\nPlease follow up with this user as soon as possible.\\n\\nCrisis Resources:\\n- National Suicide Prevention Lifeline: 988\\n- Crisis Text Line: Text HOME to 741741\\n- Emergency Services: 911`;\n}\n\n// Build contacts array from emergency_contacts\nconst contacts = emergencyContacts.map(contact => {\n  return {\n    name: contact.name || 'Emergency Contact',\n    phone: contact.phone || contact\n  };\n});\n\n// Return single item with contacts array, phone, and message\nreturn [{\n  json: {\n    contacts: contacts,\n    phone: userPhone,\n    message: message,\n    severity: severity,\n    risk_score: riskScore,\n    risk_percentage: riskPercentage,\n    user_name: userName,\n    user_phone: userPhone,\n    timestamp: timestamp,\n    contactIndex: -1,\n    original_data: webhookData\n  }\n}];"
+      },
+      "id": "462510a3-86ed-41e3-888e-088c57a3915f",
+      "name": "Format Crisis Alerts",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -128,
+        584
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": false,
+            "leftValue": "",
+            "typeValidation": "loose"
+          },
+          "conditions": [
+            {
+              "id": "id-1",
+              "leftValue": "={{ $('Format Crisis Alerts').item.json.severity }}",
+              "operator": {
+                "type": "string",
+                "operation": "notEmpty"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "6a10b6c2-723a-4dc9-8025-91467aed4387",
+      "name": "Validate Crisis Data",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        96,
+        584
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Get input data from previous node\nconst inputData = $input.all();\nconst item = inputData[0].json;\n\n// Get contacts array from original_data or directly from item\nconst contacts = item.original_data?.emergency_contacts || item.emergency_contacts || item.contacts || [];\nconst contactIndex = item.contactIndex !== undefined ? item.contactIndex : undefined;\n\n// If contactIndex is undefined (first run), initialize to 0 and return first contact\nif (contactIndex === undefined) {\n  if (contacts.length > 0) {\n    const firstContact = contacts[0];\n    return [{\n      json: {\n        ...item,\n        phone: firstContact.phone || firstContact,\n        message: item.message,\n        contacts: contacts,\n        contactIndex: 0,\n        totalContacts: contacts.length\n      }\n    }];\n  } else {\n    // No contacts to process\n    return [];\n  }\n}\n\n// If contactIndex exists, get the current contact\nif (contactIndex < contacts.length) {\n  const currentContact = contacts[contactIndex];\n  return [{\n    json: {\n      ...item,\n      phone: currentContact.phone || currentContact,\n      message: item.message,\n      contacts: contacts,\n      contactIndex: contactIndex,\n      totalContacts: contacts.length\n    }\n  }];\n}\n\n// If we've processed all contacts, return empty array\nreturn [];"
+      },
+      "id": "786a83c4-c7af-4bb5-ba82-182ab3ec05b5",
+      "name": "Split Contacts",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        320,
+        488
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.twilio.com/2010-04-01/Accounts/<__PLACEHOLDER_VALUE__Twilio Account SID__>/Messages.json",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "twilioApi",
+        "sendBody": true,
+        "contentType": "form-urlencoded",
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "From",
+              "value": "whatsapp:+14155238886"
+            },
+            {
+              "name": "To",
+              "value": "={{ 'whatsapp:' + $json.phone }}"
+            },
+            {
+              "name": "Body",
+              "value": "={{ $json.message }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "129b353c-0a4c-4b6c-a4ac-61a4ec2c1119",
+      "name": "Send WhatsApp via Twilio",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        544,
+        416
+      ]
+    },
+    {
+      "parameters": {
+        "amount": 2
+      },
+      "id": "5e4fc5b5-3e6d-4a05-a3e8-7f5723a4621d",
+      "name": "Rate Limit Delay",
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1.1,
+      "position": [
+        768,
+        416
+      ],
+      "webhookId": "977ad985-df97-480b-a0e0-693c1861bb55"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Get the current contact index and total contacts from the input data\nconst inputData = $input.all();\nconst firstItem = inputData[0].json;\n\n// Get contact index and contacts array\nlet contactIndex = firstItem.contactIndex || 0;\nconst contacts = firstItem.contacts || [];\n\n// Increment the contact index\ncontactIndex++;\n\n// Check if there are more contacts to process\nif (contactIndex < contacts.length) {\n  // More contacts to process - return data to loop back to Split Contacts\n  return [{\n    json: {\n      ...firstItem,\n      contactIndex: contactIndex,\n      totalContacts: contacts.length\n    }\n  }];\n} else {\n  // No more contacts - proceed to success response\n  return [{\n    json: {\n      ...firstItem,\n      contactIndex: contactIndex,\n      message: 'All contacts processed successfully'\n    }\n  }];\n}"
+      },
+      "id": "c287ac1e-703f-44a6-9cd3-c574c70068d0",
+      "name": "Check More Contacts",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        992,
+        488
+      ]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={\n  \"success\": true,\n  \"alerts_sent\": {{ $json.totalContacts }},\n  \"severity\": \"{{ $('Crisis Alert Webhook').item.json.body.severity }}\"\n}",
+        "options": {
+          "responseCode": 200
+        }
+      },
+      "id": "c380fd2f-333d-40e7-acbf-69aeb754e7b2",
+      "name": "Crisis Success Response",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.5,
+      "position": [
+        1216,
+        488
+      ]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "{\n  \"success\": false,\n  \"error\": \"Invalid crisis data\"\n}",
+        "options": {
+          "responseCode": 400
+        }
+      },
+      "id": "ad7db6b4-c760-4ae8-8214-8b475ef86be8",
+      "name": "Crisis Error Response",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.5,
+      "position": [
+        320,
+        680
+      ]
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "id-1",
+              "name": "success",
+              "value": true,
+              "type": "boolean"
+            },
+            {
+              "id": "id-2",
+              "name": "message",
+              "value": "Wellness plan email sent successfully",
+              "type": "string"
+            },
+            {
+              "id": "id-3",
+              "name": "email",
+              "value": "={{ $('Wellness Plan Webhook').item.json.body.user_email }}",
+              "type": "string"
+            },
+            {
+              "id": "id-4",
+              "name": "timestamp",
+              "value": "={{ new Date().toISOString() }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "1519f892-5278-4431-8077-607322cbcab8",
+      "name": "Prepare Success Data",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        544,
+        0
+      ]
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Wellness Plan Webhook": {
+      "main": [
+        [
+          {
+            "node": "Format Wellness Email",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Format Wellness Email": {
+      "main": [
+        [
+          {
+            "node": "Validate Email",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Validate Email": {
+      "main": [
+        [
+          {
+            "node": "Send Wellness Email",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Error Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send Wellness Email": {
+      "main": [
+        [
+          {
+            "node": "Prepare Success Data",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Prepare Success Data": {
+      "main": [
+        [
+          {
+            "node": "Success Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Crisis Alert Webhook": {
+      "main": [
+        [
+          {
+            "node": "Format Crisis Alerts",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Format Crisis Alerts": {
+      "main": [
+        [
+          {
+            "node": "Validate Crisis Data",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Validate Crisis Data": {
+      "main": [
+        [
+          {
+            "node": "Split Contacts",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Crisis Error Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Split Contacts": {
+      "main": [
+        [
+          {
+            "node": "Send WhatsApp via Twilio",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send WhatsApp via Twilio": {
+      "main": [
+        [
+          {
+            "node": "Rate Limit Delay",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Rate Limit Delay": {
+      "main": [
+        [
+          {
+            "node": "Check More Contacts",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Check More Contacts": {
+      "main": [
+        [
+          {
+            "node": "Split Contacts",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Crisis Success Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "fd4e4f69-b0b9-4905-9108-3326e2e47d1c",
+  "meta": {
+    "instanceId": "08cb118c9365c1c00949bc6bbb77a1306dfd4efe38bbcd6c2009cbe291882454"
+  },
+  "id": "91le49Ypy6KlJWQ7",
+  "tags": []
+}
